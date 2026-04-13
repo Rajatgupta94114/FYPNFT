@@ -18,39 +18,30 @@ export class TonBlockchainService {
   }
 
   /**
+   * Check if wallet address is from testnet
+   */
+  private isTestnetAddress(address: string): boolean {
+    // Testnet addresses typically start with different prefixes or have specific patterns
+    // This is a simplified check - in practice, you might need more sophisticated detection
+    try {
+      const parsed = Address.parse(address);
+      // Testnet addresses often have different workchain or address patterns
+      // For now, we'll try both mainnet and testnet APIs regardless
+      return false; // We'll try both APIs
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Get real TON balance from wallet
    */
   async getBalance(walletAddress: string): Promise<number> {
     console.log('Getting balance for address:', walletAddress);
     
+    // Try testnet first (for testnet wallets)
     try {
-      // Method 1: Try TON Center API (mainnet)
-      const response = await fetch('https://toncenter.com/api/v2/getAddressBalance', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address: walletAddress,
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('TON Center API result:', result);
-        
-        if (result.result) {
-          const balance = Number(fromNano(result.result));
-          console.log('TON Center balance:', balance);
-          return balance;
-        }
-      }
-    } catch (error) {
-      console.error('TON Center API failed:', error);
-    }
-
-    try {
-      // Method 2: Try TON Center API (testnet)
+      console.log('Trying testnet API...');
       const response = await fetch('https://testnet.toncenter.com/api/v2/getAddressBalance', {
         method: 'POST',
         headers: {
@@ -65,35 +56,86 @@ export class TonBlockchainService {
         const result = await response.json();
         console.log('TON Center Testnet result:', result);
         
-        if (result.result) {
+        if (result.result !== undefined && result.result !== null) {
           const balance = Number(fromNano(result.result));
           console.log('TON Center Testnet balance:', balance);
-          return balance;
+          if (balance > 0) {
+            return balance; // Return if we found a balance on testnet
+          }
         }
       }
     } catch (error) {
       console.error('TON Center Testnet API failed:', error);
     }
 
+    // Try mainnet next
     try {
-      // Method 3: Try Tonscan API
-      const response = await fetch(`https://tonscan.org/api/v2/blockchain/getAccountInformation?account_id=${walletAddress}`);
+      console.log('Trying mainnet API...');
+      const response = await fetch('https://toncenter.com/api/v2/getAddressBalance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: walletAddress,
+        }),
+      });
+
       if (response.ok) {
         const result = await response.json();
-        console.log('Tonscan result:', result);
+        console.log('TON Center Mainnet result:', result);
         
-        if (result.balance) {
-          const balance = Number(fromNano(result.balance));
-          console.log('Tonscan balance:', balance);
+        if (result.result !== undefined && result.result !== null) {
+          const balance = Number(fromNano(result.result));
+          console.log('TON Center Mainnet balance:', balance);
           return balance;
         }
       }
     } catch (error) {
-      console.error('Tonscan API failed:', error);
+      console.error('TON Center Mainnet API failed:', error);
     }
 
+    // Try alternative testnet API
     try {
-      // Method 4: Try direct client method
+      console.log('Trying alternative testnet API...');
+      const response = await fetch(`https://testnet.tonscan.org/api/v2/blockchain/getAccountInformation?account_id=${walletAddress}`);
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Testnet Tonscan result:', result);
+        
+        if (result.balance) {
+          const balance = Number(fromNano(result.balance));
+          console.log('Testnet Tonscan balance:', balance);
+          if (balance > 0) {
+            return balance;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Testnet Tonscan API failed:', error);
+    }
+
+    // Try alternative mainnet API
+    try {
+      console.log('Trying alternative mainnet API...');
+      const response = await fetch(`https://tonscan.org/api/v2/blockchain/getAccountInformation?account_id=${walletAddress}`);
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Mainnet Tonscan result:', result);
+        
+        if (result.balance) {
+          const balance = Number(fromNano(result.balance));
+          console.log('Mainnet Tonscan balance:', balance);
+          return balance;
+        }
+      }
+    } catch (error) {
+      console.error('Mainnet Tonscan API failed:', error);
+    }
+
+    // Try direct client method as last resort
+    try {
+      console.log('Trying direct client method...');
       const address = Address.parse(walletAddress);
       const balance = await this.client.getBalance(address);
       console.log('Direct client balance:', Number(fromNano(balance)));
