@@ -22,13 +22,59 @@ export class TonBlockchainService {
    */
   async getBalance(walletAddress: string): Promise<number> {
     try {
+      // Method 1: Try TON Center API without API key
+      const response = await fetch(`${this.isTestnet ? TON_TESTNET_API : TON_API_ENDPOINT}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          method: 'getAddressBalance',
+          params: { address: walletAddress },
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.result && result.result.balance) {
+        return Number(fromNano(result.result.balance));
+      }
+    } catch (error) {
+      console.error('TON Center API failed:', error);
+    }
+
+    try {
+      // Method 2: Try TON API (public)
+      const response = await fetch(`https://tonapi.io/v2/blockchain/getAccountInformation?account_id=${walletAddress}`);
+      const result = await response.json();
+      if (result.balance) {
+        return Number(fromNano(result.balance));
+      }
+    } catch (error) {
+      console.error('TON API failed:', error);
+    }
+
+    try {
+      // Method 3: Try getblock.io API
+      const response = await fetch(`https://testnet.tonscan.org/api/v2/blockchain/getAccountInformation?account_id=${walletAddress}`);
+      const result = await response.json();
+      if (result.balance) {
+        return Number(fromNano(result.balance));
+      }
+    } catch (error) {
+      console.error('Tonscan API failed:', error);
+    }
+
+    try {
+      // Method 4: Try direct client method as last resort
       const address = Address.parse(walletAddress);
       const balance = await this.client.getBalance(address);
       return Number(fromNano(balance));
     } catch (error) {
-      console.error('Error getting balance:', error);
-      throw new Error('Failed to get wallet balance');
+      console.error('Direct client method failed:', error);
     }
+
+    return 0;
   }
 
   /**

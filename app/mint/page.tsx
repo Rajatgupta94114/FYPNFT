@@ -46,7 +46,9 @@ export default function MintPage() {
       if (wallet) {
         setIsLoadingBalance(true);
         try {
+          console.log('Fetching balance for address:', wallet.account.address);
           const balance = await tonBlockchainService.getBalance(wallet.account.address);
+          console.log('Fetched balance:', balance);
           setTonBalance(balance);
         } catch (error) {
           console.error('Error fetching balance:', error);
