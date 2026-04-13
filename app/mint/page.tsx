@@ -82,6 +82,16 @@ export default function MintPage() {
       return;
     }
 
+    // Check if TonConnect UI is available
+    if (!tonConnectUI) {
+      alert('TonConnect UI not available. Please refresh the page and try again.');
+      return;
+    }
+
+    console.log('Wallet connected:', wallet);
+    console.log('TonConnect UI available:', !!tonConnectUI);
+    console.log('TonConnect UI state:', tonConnectUI.connected);
+
     setIsMinting(true);
 
     try {
@@ -171,11 +181,19 @@ export default function MintPage() {
 
     } catch (error) {
       console.error('Minting error:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        name: error instanceof Error ? error.name : 'Unknown error'
+      });
+      
       if (transactionId) {
         updateTransactionStatus(transactionId, 'failed');
         setTransactionStatus('failed');
       }
-      alert('Failed to mint NFT. Please check your wallet and try again.');
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to mint NFT: ${errorMessage}. Please check your wallet connection and try again.`);
     } finally {
       setIsMinting(false);
     }
