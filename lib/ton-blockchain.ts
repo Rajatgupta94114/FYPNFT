@@ -176,12 +176,18 @@ export class TonBlockchainService {
         messages: [
           {
             address: walletAddress, // Send to self
-            amount: mintCost,
+            amount: mintCost.toString(), // Convert BigInt to string
           },
         ],
       };
 
-      console.log('Transaction object:', JSON.stringify(transaction, null, 2));
+      console.log('Transaction object:', JSON.stringify(transaction, (key, value) => {
+        // Handle BigInt values by converting to string
+        if (typeof value === 'bigint') {
+          return value.toString();
+        }
+        return value;
+      }, 2));
       
       // Check if TonConnect is ready
       if (!tonConnectUI) {
