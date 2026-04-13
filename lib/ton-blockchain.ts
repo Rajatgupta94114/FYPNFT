@@ -163,57 +163,49 @@ export class TonBlockchainService {
   ): Promise<string> {
     try {
       console.log('Starting NFT mint transaction...');
-      console.log('TonConnect UI:', tonConnectUI);
-      
-      // Calculate mint cost (0.1 TON base + royalty)
-      const mintCost = toNano(0.1 + (nftData.royalty * 0.01));
-      console.log('Mint cost (nano):', mintCost.toString());
-      console.log('Mint cost (TON):', (0.1 + (nftData.royalty * 0.01)).toString());
-      
-      // Create a simple transaction that will definitely prompt the wallet
-      const transaction = {
-        validUntil: Math.floor(Date.now() / 1000) + 3600, // 1 hour
-        messages: [
-          {
-            address: walletAddress, // Send to self
-            amount: mintCost.toString(), // Convert BigInt to string
-          },
-        ],
-      };
-
-      console.log('Transaction object:', JSON.stringify(transaction, (key, value) => {
-        // Handle BigInt values by converting to string
-        if (typeof value === 'bigint') {
-          return value.toString();
-        }
-        return value;
-      }, 2));
+      console.log('TonConnect UI available:', !!tonConnectUI);
       
       // Check if TonConnect is ready
       if (!tonConnectUI) {
         throw new Error('TonConnect UI not available');
       }
+
+      // Calculate mint cost (0.1 TON base + royalty)
+      const mintCost = 0.1 + (nftData.royalty * 0.01);
+      console.log('Mint cost (TON):', mintCost.toString());
       
-      console.log('Sending transaction via TonConnect...');
+      // Create a simple transaction that will prompt the mobile wallet
+      const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 3600, // 1 hour
+        messages: [
+          {
+            address: walletAddress, // Send to self (simple transfer for demo)
+            amount: mintCost.toString(), // Convert to string to avoid BigInt issues
+          },
+        ],
+      };
+
+      console.log('Transaction object:', transaction);
       
       // Send transaction via TonConnect - this should prompt mobile wallet
+      console.log('Sending transaction via TonConnect...');
       const result = await tonConnectUI.sendTransaction(transaction);
       
-      console.log('Transaction result:', result);
+      console.log('Transaction completed:', result);
       
+      // Check if transaction was successful
       if (result && (result.boc || result.result)) {
-        // Transaction was sent successfully
         const boc = result.boc || result.result;
-        console.log('Transaction sent successfully, BOC:', boc);
+        console.log('Transaction sent successfully');
         return boc;
       } else {
-        console.log('Transaction result structure:', Object.keys(result || {}));
-        throw new Error('Transaction failed - no valid result returned');
+        console.log('Transaction failed or cancelled');
+        throw new Error('Transaction was not completed');
       }
     } catch (error) {
-      console.error('Error minting NFT:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      throw new Error('Failed to mint NFT on blockchain: ' + errorMessage);
+      console.error('Error in mintNFT:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Transaction failed: ${errorMessage}`);
     }
   }
 
