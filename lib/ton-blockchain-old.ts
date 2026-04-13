@@ -305,7 +305,7 @@ export class TonBlockchainService {
       const address = Address.parse(walletAddress);
       const mintCost = toNano(0.1 + (nftData.royalty * 0.01));
       
-      // Gas estimation would typically involve running to transaction in simulation mode
+      // Gas estimation would typically involve running the transaction in simulation mode
       // For now, return a reasonable estimate
       return 0.01; // 0.01 TON for gas
     } catch (error) {
