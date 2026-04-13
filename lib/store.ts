@@ -50,6 +50,19 @@ export interface UserAccount {
   createdAt: string;
 }
 
+export interface Transaction {
+  id: string;
+  hash: string;
+  type: 'mint' | 'buy' | 'sell';
+  amount: number;
+  from: string;
+  to: string;
+  timestamp: string;
+  status: 'pending' | 'confirmed' | 'failed';
+  nftId?: string;
+  description: string;
+}
+
 export interface Creator {
   id: string;
   name: string;
@@ -119,6 +132,12 @@ interface Store {
   profileNFTs: NFTItem[];
   addToProfile: (nft: NFTItem) => void;
   removeFromProfile: (imageUrl: string) => void;
+
+  // Transaction Management
+  transactions: Transaction[];
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'timestamp'>) => void;
+  updateTransactionStatus: (id: string, status: Transaction['status']) => void;
+  getTransactionsByType: (type: Transaction['type']) => Transaction[];
 }
 
 export const useStore = create<Store>((set, get) => ({
@@ -126,6 +145,7 @@ export const useStore = create<Store>((set, get) => ({
   profileNFTs: [],
   coins: 1000,
   userAccount: null,
+  transactions: [],
   addToCart: (nft) =>
     set((state) => {
       const existing = state.cart.find((item) => item.id === nft.id);
@@ -249,5 +269,28 @@ export const useStore = create<Store>((set, get) => ({
   hasAccount: () => {
     const state = get();
     return state.userAccount !== null;
+  },
+
+  // Transaction Management Implementations
+  addTransaction: (transaction) =>
+    set((state) => ({
+      transactions: [
+        ...state.transactions,
+        {
+          ...transaction,
+          id: `tx-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    })),
+  updateTransactionStatus: (id, status) =>
+    set((state) => ({
+      transactions: state.transactions.map((tx) =>
+        tx.id === id ? { ...tx, status } : tx
+      ),
+    })),
+  getTransactionsByType: (type) => {
+    const state = get();
+    return state.transactions.filter((tx) => tx.type === type);
   },
 }));

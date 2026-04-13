@@ -3,12 +3,16 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Sparkles, Crown, Wallet, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Sparkles, Crown, Wallet, Image as ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { useTonWallet, useTonConnectUI } from '@tonconnect/ui-react';
 
 export default function MintPage() {
   const router = useRouter();
-  const { addToCart, addToProfile, coins, deductCoins } = useStore();
+  const { addToCart, addToProfile, coins, deductCoins, addTransaction, updateTransactionStatus } = useStore();
+  const wallet = useTonWallet();
+  const [tonConnectUI] = useTonConnectUI();
+  
   const [imageData, setImageData] = useState<{
     url: string;
     prompt: string;
@@ -19,6 +23,8 @@ export default function MintPage() {
   const [description, setDescription] = useState('');
   const [isMinting, setIsMinting] = useState(false);
   const [mintSuccess, setMintSuccess] = useState(false);
+  const [transactionId, setTransactionId] = useState<string | null>(null);
+  const [transactionStatus, setTransactionStatus] = useState<'pending' | 'confirmed' | 'failed'>('pending');
 
   useEffect(() => {
     // Get image data from localStorage (set from generate page)
@@ -43,12 +49,16 @@ export default function MintPage() {
       return;
     }
 
+    // Check if wallet is connected
+    if (!wallet) {
+      alert('Please connect your TON wallet first!');
+      tonConnectUI.openModal();
+      return;
+    }
+
     setIsMinting(true);
 
     try {
-      // Simulate blockchain minting process
-      await new Promise(resolve => setTimeout(resolve, 3000));
-
       // Create NFT object matching NFTItem interface
       const nftData = {
         id: `nft-${Date.now()}`,
@@ -62,7 +72,7 @@ export default function MintPage() {
         likes: 0,
         liked: false,
         collection: 'PromptOwn AI Collection',
-        owner: 'You',
+        owner: wallet.account.address,
         createdAt: new Date().toISOString(),
         description,
         priceHistory: [],
@@ -72,9 +82,25 @@ export default function MintPage() {
           { name: 'Model', value: 'Stable Diffusion XL' }
         ],
         ownershipHistory: [
-          { address: 'Your Wallet', date: new Date().toISOString() }
+          { address: wallet.account.address, date: new Date().toISOString() }
         ]
       };
+
+      // Create transaction record
+      const newTransaction = {
+        hash: `0x${Math.random().toString(16).substr(2, 64)}`,
+        type: 'mint' as const,
+        amount: 0.1,
+        from: wallet.account.address,
+        to: 'PromptOwn Contract',
+        status: 'pending' as const,
+        nftId: nftData.id,
+        description: `Mint NFT: ${nftName}`
+      };
+
+      addTransaction(newTransaction);
+      const txId = `tx-${Date.now()}`;
+      setTransactionId(txId);
 
       // Deduct 5 coins for minting
       const coinsDeducted = deductCoins(5);
@@ -82,8 +108,12 @@ export default function MintPage() {
         throw new Error('Failed to deduct coins');
       }
 
-      // Add to cart (for now, simulating purchase flow)
-      addToCart(nftData);
+      // Simulate blockchain transaction process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Update transaction status to confirmed
+      updateTransactionStatus(txId, 'confirmed');
+      setTransactionStatus('confirmed');
 
       // Add to profile NFTs
       addToProfile(nftData);
@@ -96,10 +126,14 @@ export default function MintPage() {
       // Redirect to profile after successful mint
       setTimeout(() => {
         router.push('/profile');
-      }, 2000);
+      }, 3000);
 
     } catch (error) {
       console.error('Minting error:', error);
+      if (transactionId) {
+        updateTransactionStatus(transactionId, 'failed');
+        setTransactionStatus('failed');
+      }
       alert('Failed to mint NFT. Please try again.');
     } finally {
       setIsMinting(false);
@@ -285,8 +319,51 @@ export default function MintPage() {
                   <span className="text-gray-400">Gas Fees:</span>
                   <span className="text-yellow-400 font-semibold">~0.01 TON</span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Wallet:</span>
+                  <span className="text-cyan-400 font-semibold">
+                    {wallet ? `${wallet.account.address.slice(0, 6)}...${wallet.account.address.slice(-4)}` : 'Not Connected'}
+                  </span>
+                </div>
               </div>
             </div>
+
+            {/* Transaction Status */}
+            {isMinting && transactionId && (
+              <div className="glass rounded-xl border-cyan-400/20 p-6">
+                <h3 className="text-xl font-semibold text-white mb-4">Transaction Status</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    {transactionStatus === 'pending' && (
+                      <>
+                        <div className="animate-spin">
+                          <AlertCircle size={20} className="text-yellow-400" />
+                        </div>
+                        <span className="text-yellow-400 font-semibold">Transaction Pending...</span>
+                      </>
+                    )}
+                    {transactionStatus === 'confirmed' && (
+                      <>
+                        <CheckCircle size={20} className="text-green-400" />
+                        <span className="text-green-400 font-semibold">Transaction Confirmed!</span>
+                      </>
+                    )}
+                    {transactionStatus === 'failed' && (
+                      <>
+                        <AlertCircle size={20} className="text-red-400" />
+                        <span className="text-red-400 font-semibold">Transaction Failed</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    Transaction ID: {transactionId}
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    Please confirm the transaction in your mobile wallet app
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Mint Button */}
             <motion.button

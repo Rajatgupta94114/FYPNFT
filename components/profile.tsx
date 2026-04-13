@@ -8,6 +8,7 @@ import { AnalyticsDashboard } from './analytics-dashboard';
 import { CreatorProfile } from './creator-profile';
 import { Collections } from './collections-profile';
 import { ActivityFeed } from './activity-feed';
+import { TransactionHistory } from './transaction-history';
 import { useStore } from '@/lib/store';
 
 const userProfile = {
@@ -334,6 +335,12 @@ export function Profile() {
               >
                 Activity
               </TabsTrigger>
+              <TabsTrigger
+                value="transactions"
+                className="flex-1 rounded-md data-[state=active]:bg-cyan-400/20 data-[state=active]:text-cyan-400 text-gray-400 font-semibold py-3 transition-all"
+              >
+                Transactions
+              </TabsTrigger>
             </TabsList>
 
             {/* My NFTs Tab */}
@@ -534,6 +541,17 @@ export function Profile() {
                 transition={{ duration: 0.5 }}
               >
                 <ActivityFeed />
+              </motion.div>
+            </TabsContent>
+
+            {/* Transactions Tab */}
+            <TabsContent value="transactions">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <TransactionHistory />
               </motion.div>
             </TabsContent>
           </Tabs>
