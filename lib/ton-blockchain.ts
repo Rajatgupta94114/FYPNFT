@@ -163,37 +163,46 @@ export class TonBlockchainService {
   ): Promise<string> {
     try {
       console.log('Starting NFT mint transaction...');
+      console.log('TonConnect UI:', tonConnectUI);
       
       // Calculate mint cost (0.1 TON base + royalty)
       const mintCost = toNano(0.1 + (nftData.royalty * 0.01));
       console.log('Mint cost (nano):', mintCost.toString());
+      console.log('Mint cost (TON):', (0.1 + (nftData.royalty * 0.01)).toString());
       
-      // For now, we'll send a simple transfer transaction to prompt the wallet
-      // In a real implementation, this would be an NFT smart contract call
+      // Create a simple transaction that will definitely prompt the wallet
       const transaction = {
         validUntil: Math.floor(Date.now() / 1000) + 3600, // 1 hour
         messages: [
           {
-            address: walletAddress, // Send to self for now (simple transfer)
+            address: walletAddress, // Send to self
             amount: mintCost,
-            // No payload for simple transfer
           },
         ],
       };
 
-      console.log('Sending transaction via TonConnect:', transaction);
+      console.log('Transaction object:', JSON.stringify(transaction, null, 2));
       
-      // Send transaction via TonConnect - this should prompt the mobile wallet
+      // Check if TonConnect is ready
+      if (!tonConnectUI) {
+        throw new Error('TonConnect UI not available');
+      }
+      
+      console.log('Sending transaction via TonConnect...');
+      
+      // Send transaction via TonConnect - this should prompt mobile wallet
       const result = await tonConnectUI.sendTransaction(transaction);
       
       console.log('Transaction result:', result);
       
-      if (result.boc) {
+      if (result && (result.boc || result.result)) {
         // Transaction was sent successfully
-        console.log('Transaction sent successfully, BOC:', result.boc);
-        return result.boc;
+        const boc = result.boc || result.result;
+        console.log('Transaction sent successfully, BOC:', boc);
+        return boc;
       } else {
-        throw new Error('Transaction failed - no BOC returned');
+        console.log('Transaction result structure:', Object.keys(result || {}));
+        throw new Error('Transaction failed - no valid result returned');
       }
     } catch (error) {
       console.error('Error minting NFT:', error);

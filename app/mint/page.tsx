@@ -130,6 +130,10 @@ export default function MintPage() {
 
       // Perform real TON blockchain transaction
       console.log('Starting real TON transaction...');
+      console.log('Wallet connected:', wallet);
+      console.log('TonConnect UI available:', !!tonConnectUI);
+      console.log('TonConnect UI methods:', tonConnectUI ? Object.getOwnPropertyNames(tonConnectUI) : 'N/A');
+      
       const txHash = await tonBlockchainService.mintNFT(
         wallet.account.address,
         tonConnectUI,
