@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Sparkles, Crown, Wallet, Image as ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useTonWallet, useTonConnectUI } from '@tonconnect/ui-react';
+import { tonBlockchainService } from '@/lib/ton-blockchain';
 
 export default function MintPage() {
   const router = useRouter();
@@ -25,6 +26,8 @@ export default function MintPage() {
   const [mintSuccess, setMintSuccess] = useState(false);
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'confirmed' | 'failed'>('pending');
+  const [tonBalance, setTonBalance] = useState<number>(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
 
   useEffect(() => {
     // Get image data from localStorage (set from generate page)
@@ -37,15 +40,36 @@ export default function MintPage() {
     }
   }, []);
 
+  useEffect(() => {
+    // Get real TON balance when wallet is connected
+    const fetchBalance = async () => {
+      if (wallet) {
+        setIsLoadingBalance(true);
+        try {
+          const balance = await tonBlockchainService.getBalance(wallet.account.address);
+          setTonBalance(balance);
+        } catch (error) {
+          console.error('Error fetching balance:', error);
+          setTonBalance(0);
+        } finally {
+          setIsLoadingBalance(false);
+        }
+      }
+    };
+
+    fetchBalance();
+  }, [wallet]);
+
   const handleMint = async () => {
     if (!imageData || !nftName.trim()) {
       alert('Please provide an NFT name');
       return;
     }
 
-    // Check if user has enough coins (5 coins required)
-    if (coins < 5) {
-      alert('Insufficient coins! You need 5 coins to mint an NFT. You currently have ' + coins + ' coins.');
+    // Check if user has enough TON coins (0.1 TON required for minting)
+    const mintCost = 0.1 + (royalty * 0.01);
+    if (tonBalance < mintCost) {
+      alert(`Insufficient TON coins! You need ${mintCost} TON to mint an NFT. You currently have ${tonBalance} TON.`);
       return;
     }
 
@@ -66,7 +90,7 @@ export default function MintPage() {
         creator: 'You',
         creatorAvatar: '/placeholder-user.jpg',
         image: imageData.url,
-        price: 0.1 + (royalty * 0.01),
+        price: mintCost,
         floorPrice: 0.05,
         rarity: 'common' as const,
         likes: 0,
@@ -90,7 +114,7 @@ export default function MintPage() {
       const newTransaction = {
         hash: `0x${Math.random().toString(16).substr(2, 64)}`,
         type: 'mint' as const,
-        amount: 0.1,
+        amount: mintCost,
         from: wallet.account.address,
         to: 'PromptOwn Contract',
         status: 'pending' as const,
@@ -102,18 +126,25 @@ export default function MintPage() {
       const txId = `tx-${Date.now()}`;
       setTransactionId(txId);
 
-      // Deduct 5 coins for minting
-      const coinsDeducted = deductCoins(5);
-      if (!coinsDeducted) {
-        throw new Error('Failed to deduct coins');
-      }
+      // Perform real TON blockchain transaction
+      const txHash = await tonBlockchainService.mintNFT(
+        wallet.account.address,
+        tonConnectUI,
+        {
+          name: nftName,
+          description: description,
+          imageUrl: imageData.url,
+          royalty: royalty
+        }
+      );
 
-      // Simulate blockchain transaction process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Update transaction status to confirmed
+      // Update transaction with real hash
       updateTransactionStatus(txId, 'confirmed');
       setTransactionStatus('confirmed');
+
+      // Refresh balance after transaction
+      const newBalance = await tonBlockchainService.getBalance(wallet.account.address);
+      setTonBalance(newBalance);
 
       // Add to profile NFTs
       addToProfile(nftData);
@@ -134,7 +165,7 @@ export default function MintPage() {
         updateTransactionStatus(transactionId, 'failed');
         setTransactionStatus('failed');
       }
-      alert('Failed to mint NFT. Please try again.');
+      alert('Failed to mint NFT. Please check your wallet and try again.');
     } finally {
       setIsMinting(false);
     }
@@ -284,21 +315,25 @@ export default function MintPage() {
               </div>
             </div>
 
-            {/* Coins Info */}
+            {/* TON Balance Info */}
             <div className="glass rounded-xl border-cyan-400/20 p-6">
-              <h3 className="text-xl font-semibold text-white mb-4">Minting Cost</h3>
+              <h3 className="text-xl font-semibold text-white mb-4">TON Balance</h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Your Balance:</span>
-                  <span className="text-yellow-400 font-semibold">{coins} Coins</span>
+                  <span className="text-gray-400">Your TON Balance:</span>
+                  <span className="text-yellow-400 font-semibold">
+                    {isLoadingBalance ? 'Loading...' : `${tonBalance.toFixed(4)} TON`}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400">Mint Cost:</span>
-                  <span className="text-red-400 font-semibold">5 Coins</span>
+                  <span className="text-red-400 font-semibold">{(0.1 + royalty * 0.01).toFixed(4)} TON</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400">Remaining After Mint:</span>
-                  <span className="text-cyan-400 font-semibold">{coins - 5} Coins</span>
+                  <span className="text-cyan-400 font-semibold">
+                    {isLoadingBalance ? 'Loading...' : `${Math.max(0, tonBalance - (0.1 + royalty * 0.01)).toFixed(4)} TON`}
+                  </span>
                 </div>
               </div>
             </div>
