@@ -170,17 +170,20 @@ export class TonBlockchainService {
         throw new Error('TonConnect UI not available');
       }
 
-      // Calculate mint cost (0.1 TON base + royalty)
-      const mintCost = 0.1 + (nftData.royalty * 0.01);
-      console.log('Mint cost (TON):', mintCost.toString());
+      // Calculate mint cost (0.1 TON base + royalty) and convert to nanotons
+      const mintCostInTon = 0.1 + (nftData.royalty * 0.01);
+      const amount = toNano(mintCostInTon).toString();
+      console.log('Mint cost (TON):', mintCostInTon.toString());
+      console.log('Mint cost (nanotons):', amount);
       
       // Create a simple transaction that will prompt mobile wallet
+      const parsedAddress = Address.parse(walletAddress);
       const transaction = {
         validUntil: Math.floor(Date.now() / 1000) + 3600, // 1 hour
         messages: [
           {
-            address: walletAddress.toString(), // Convert address to string format
-            amount: mintCost.toString(), // Convert to string to avoid BigInt issues
+            address: parsedAddress.toString(), // Use properly formatted TON address
+            amount: amount, // Use nanotons as string
           },
         ],
       };
