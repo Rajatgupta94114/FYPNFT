@@ -9,7 +9,7 @@ interface TonConnectProviderProps {
 export function TonConnectProvider({ children }: TonConnectProviderProps) {
   return (
     <TonConnectUIProvider 
-      manifestUrl="/tonconnect-manifest.json"
+      manifestUrl="https://fypfs.netlify.app/tonconnect-manifest.json"
     >
       {children}
     </TonConnectUIProvider>
