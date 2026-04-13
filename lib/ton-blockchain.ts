@@ -174,12 +174,12 @@ export class TonBlockchainService {
       const mintCost = 0.1 + (nftData.royalty * 0.01);
       console.log('Mint cost (TON):', mintCost.toString());
       
-      // Create a simple transaction that will prompt the mobile wallet
+      // Create a simple transaction that will prompt mobile wallet
       const transaction = {
         validUntil: Math.floor(Date.now() / 1000) + 3600, // 1 hour
         messages: [
           {
-            address: walletAddress, // Send to self (simple transfer for demo)
+            address: walletAddress.toString(), // Convert address to string format
             amount: mintCost.toString(), // Convert to string to avoid BigInt issues
           },
         ],
