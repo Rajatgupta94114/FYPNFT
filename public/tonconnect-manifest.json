@@ -1,7 +1,5 @@
 {
   "url": "https://fypfs.netlify.app",
   "name": "PromptOwn - AI Art NFT Platform",
-  "iconUrl": "https://fypfs.netlify.app/icon.svg",
-  "termsOfUseUrl": "https://promptown.com/terms",
-  "privacyPolicyUrl": "https://promptown.com/privacy"
+  "iconUrl": "https://fypfs.netlify.app/icon.svg"
 }
