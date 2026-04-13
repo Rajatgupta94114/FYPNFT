@@ -185,7 +185,13 @@ export class TonBlockchainService {
         ],
       };
 
-      console.log('Transaction object:', transaction);
+      console.log('Transaction object:', {
+        validUntil: transaction.validUntil,
+        messages: transaction.messages.map(msg => ({
+          address: msg.address,
+          amount: msg.amount
+        }))
+      });
       
       // Send transaction via TonConnect - this should prompt mobile wallet
       console.log('Sending transaction via TonConnect...');
