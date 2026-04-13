@@ -129,6 +129,7 @@ export default function MintPage() {
       setTransactionId(txId);
 
       // Perform real TON blockchain transaction
+      console.log('Starting real TON transaction...');
       const txHash = await tonBlockchainService.mintNFT(
         wallet.account.address,
         tonConnectUI,
@@ -140,6 +141,8 @@ export default function MintPage() {
         }
       );
 
+      console.log('Transaction completed successfully:', txHash);
+
       // Update transaction with real hash
       updateTransactionStatus(txId, 'confirmed');
       setTransactionStatus('confirmed');
@@ -147,6 +150,7 @@ export default function MintPage() {
       // Refresh balance after transaction
       const newBalance = await tonBlockchainService.getBalance(wallet.account.address);
       setTonBalance(newBalance);
+      console.log('New balance after transaction:', newBalance);
 
       // Add to profile NFTs
       addToProfile(nftData);

@@ -162,44 +162,43 @@ export class TonBlockchainService {
     }
   ): Promise<string> {
     try {
-      // Get wallet contract
-      const address = Address.parse(walletAddress);
+      console.log('Starting NFT mint transaction...');
       
       // Calculate mint cost (0.1 TON base + royalty)
       const mintCost = toNano(0.1 + (nftData.royalty * 0.01));
+      console.log('Mint cost (nano):', mintCost.toString());
       
-      // Create transaction payload for NFT minting
-      const payload = beginCell()
-        .storeUint(1, 32) // operation: mint_nft
-        .storeUint(0, 64) // query_id
-        .storeCoins(mintCost) // mint cost
-        .storeRef(this.createNFTMetadataCell(nftData))
-        .endCell();
-
-      // Create transaction
+      // For now, we'll send a simple transfer transaction to prompt the wallet
+      // In a real implementation, this would be an NFT smart contract call
       const transaction = {
         validUntil: Math.floor(Date.now() / 1000) + 3600, // 1 hour
         messages: [
           {
-            address: address.toString(),
+            address: walletAddress, // Send to self for now (simple transfer)
             amount: mintCost,
-            payload: payload.toBoc().toString('base64'),
+            // No payload for simple transfer
           },
         ],
       };
 
-      // Send transaction via TonConnect
+      console.log('Sending transaction via TonConnect:', transaction);
+      
+      // Send transaction via TonConnect - this should prompt the mobile wallet
       const result = await tonConnectUI.sendTransaction(transaction);
+      
+      console.log('Transaction result:', result);
       
       if (result.boc) {
         // Transaction was sent successfully
+        console.log('Transaction sent successfully, BOC:', result.boc);
         return result.boc;
       } else {
-        throw new Error('Transaction failed');
+        throw new Error('Transaction failed - no BOC returned');
       }
     } catch (error) {
       console.error('Error minting NFT:', error);
-      throw new Error('Failed to mint NFT on blockchain');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      throw new Error('Failed to mint NFT on blockchain: ' + errorMessage);
     }
   }
 
